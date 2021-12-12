@@ -1,5 +1,5 @@
 from tkinter import *
-from Assistant_ import Assistant
+from Assistant import Assistant
 import os, time, webbrowser
 import Trainer
 
