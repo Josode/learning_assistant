@@ -10,8 +10,6 @@ if not os.path.isfile("data/default_win_size.txt"):
     with open("data/default_win_size.txt", 'wb') as file:
         pass
 
-    default_window_size = "400x300"
-
 else:
     # file exists, takes existing window size and defines it
     print('"default_win_size.txt" file found.')
