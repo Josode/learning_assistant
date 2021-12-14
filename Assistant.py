@@ -15,8 +15,7 @@ class Assistant:
         self.user_name = "You"
 
         self.vocab = vocab_dict.VOCAB
-        self.previous_response = ""
-        self.previous_previous_response = ""
+        self.previous_responses = []
 
         self.speak_rate = 185
         self.input_type = ""
@@ -105,37 +104,72 @@ class Assistant:
         score_list = [] # [3, 4, 5]
 
         try:
+
+            best_match = ""
+
             for i in vocab:
                 vocab_list.append(i)
 
             for item in vocab_list:
+                print("item: " + item)
                 score = 0
                 len_diff = abs(len(item) - len(message))
-                score -= (len_diff)/10
+                score -= (len_diff)/3
 
                 if item == message:
-                    score+=1
+                    print(item + " == " + message + ", +2")
+                    score+=2
+
+
+                try:
+                    if self.previous_responses[-1] in item:
+                        print(self.previous_responses[-1] + " in " + item + ", +0.5")
+                        score-=1
+                    elif self.previous_responses[-2] in item:
+                        print(self.previous_responses[-2] + " in " + item + ", +0.3")
+                        score-=1
+                    elif self.previous_responses[-3] in item:
+                        print(self.previous_responses[-3] + " in " + item + ", +0.2")
+                        score-= 1
+                except IndexError:
+                    pass
 
                 item = item.split()
                 print(item)
+
+                # itterates through words of each vocab item, compares each to each word in message
                 for word in item:
                     for i in range(0, len(message_list)):
                         if word in message_list[i] or message_list[i] in word:
-                            score+=0.8
-                        if word == message_list[i]:
+                            if word == "" or message_list[i] == "":
+                                continue
+                            if len(word) >= 2:
+                                score+=1
+                                print(word + " in " + message_list[i] + " or vice versa, +0.5")
+                        elif word == message_list[i]:
+                            print(word + " == " + message_list[i] + ", +1")
                             score+=1
+
                 score_list.append(score)
 
-            print("score: " + str(score_list[-1]))
+                print("score: " + str(score_list[-1])+"\n\n")
 
             top_match = 0
             for num in score_list:
                 if num >= top_match:
                     top_match = num
 
-            best_match = random.choice(vocab[vocab_list[score_list.index(top_match)]])
-            print("best match: " + str(top_match))
+            try:
+                best_match = random.choice(vocab[vocab_list[score_list.index(top_match)]])
+            except ValueError:
+                print("value error")
+                pass
+
+            print("best match: " + str(top_match) + "\nmessage: " + message + "\ntrained from: " +
+                  vocab_list[score_list.index(top_match)] + "\n\n")
+
             return [best_match]
+
         except KeyError:
             return ["No response, please train."]
 
@@ -163,7 +197,7 @@ class Assistant:
 
         # if input IS IN vocab
         else:
-            response = random.choice(self.vocab[message])
+            response = self.vocab[message]
 
             # add response as value to key
             temp_response = response
@@ -176,8 +210,7 @@ class Assistant:
         trainer = self.loop(user_input)
         while trainer[1] is True:
             trainer = self.loop(trainer[0])
-        self.previous_response = trainer[0]
-        print(self.previous_response)
+        self.previous_responses.append(trainer[0])
         return trainer[0]
 
     # begins new session
@@ -200,7 +233,7 @@ class Assistant:
         self.save_log(user_in, self.user_name)
 
         # finds command and returns answer
-        bot_response = self.command(user_in).lower()
+        bot_response = self.command(user_in)
 
         # no relavent command found, use conversational response from cleverbot
         if bot_response is None:
@@ -210,6 +243,7 @@ class Assistant:
             for data in self.data_types:
                 if data in bot_response:
                     self.say(bot_response)
+
                     self.say("Speaking of which, didn't you tell me your favorite " + data + " was "
                             + self.data_types[data] + "?")
                     break
@@ -218,6 +252,7 @@ class Assistant:
                     break
         else:
             self.say(bot_response)
+
 
     # saves/updates log of session to file "chat_history.txt"
     def save_log(self, phrase, speaker):
@@ -368,7 +403,7 @@ class Assistant:
                     data_val = data_val + user_data[i] + " "
 
                 self.save_data(data_type.strip(), data_val.strip())
-                return data_val + "? Good choice.  I'll remember that about you."
+                return data_val + "? Good choice."
 
         # what is my favorite _______
         elif ("what" in user_input or "who" in user_input) and "my favorite" in user_input:
@@ -485,15 +520,6 @@ class Assistant:
                     t = threading.Timer(timer_len, start_)
                     t.start()
                     return "Alright, I started a " + str(timer_len) + " second timer."
-
-        # bye/ stop end session
-        goodbyes = ["end session", "exit"]
-        for goodbye in goodbyes:
-            if user_input == goodbye:
-                response = "Bye bye!"
-                self.say(response)
-                self.save_log(response, self.bot_name)
-                exit()
 
         # No command for input
         else:
